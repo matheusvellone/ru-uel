@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Cardápio RU</string>
+    <string name="sobre">Sobre</string>
+    <string name="tabela_precos">Tabela de Preços</string>
+    <string name="desenvolvedor1">Matheus Peviani Vellone - Ciência da Computação UEL</string>
+    <string-array name="string_array_dias">
+        <item>SEG</item>
+        <item>TER</item>
+        <item>QUA</item>
+        <item>QUI</item>
+        <item>SEX</item>
+    </string-array>
+    <string-array name="tipo_credito">
+        <item>Visitante</item>
+        <item>Estudante</item>
+    </string-array>
+
+</resources>
