@@ -4,6 +4,9 @@
     <string name="app_name">Cardápio RU</string>
     <string name="sobre">Sobre</string>
     <string name="tabela_precos">Tabela de Preços</string>
+    <string name="numero_creditos">Número de Créditos</string>
+    <string name="valor_inicial_numero_creditos">1</string>
+    <string name="btn_calcular">Calcular</string>
     <string name="desenvolvedor1">Matheus Peviani Vellone - Ciência da Computação UEL</string>
     <string-array name="string_array_dias">
         <item>SEG</item>
@@ -11,10 +14,6 @@
         <item>QUA</item>
         <item>QUI</item>
         <item>SEX</item>
-    </string-array>
-    <string-array name="tipo_credito">
-        <item>Visitante</item>
-        <item>Estudante</item>
     </string-array>
 
 </resources>

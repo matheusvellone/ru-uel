@@ -14,12 +14,6 @@ public class SemInternetDialog extends AlertDialog {
         setTitle("Sem conexão com a internet");
         setMessage("Não foi possível estabelecer uma conexão com a Internet para esta operação");
         setCancelable(true);
-        setOnDismissListener(new OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                System.exit(0);
-            }
-        });
         show();
     }
 

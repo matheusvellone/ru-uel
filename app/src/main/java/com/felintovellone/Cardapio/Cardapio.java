@@ -14,12 +14,14 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.felintovellone.ru.uel.R;
 
@@ -28,6 +30,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -38,6 +41,7 @@ import Dialogs.Sobre;
 import Dialogs.TabelaPrecos;
 import Model.Dia;
 import Utils.JSONParser;
+import Utils.PainelDeControle;
 
 public class Cardapio extends ActionBarActivity implements
         ActionBar.TabListener {
@@ -47,6 +51,7 @@ public class Cardapio extends ActionBarActivity implements
     //Para tratar o JSON do cardápio
     private final String url_cardapio = "http://ruuel.zz.vc/Cardapio/android.json";
     private final String TAG_SUCCESS = "success";
+    private static final String NOME_JSON_CARDAPIO_OFFLINE = "cardapioOffline.json";
     JSONArray refeicoes = null;
     private Dia[] cardapio;
     private String[] dias;
@@ -60,6 +65,22 @@ public class Cardapio extends ActionBarActivity implements
                 default:
                     break;
             }
+        }
+    };
+
+    private Handler toast = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            String s = "ERRO";
+            switch (msg.what) {
+                case 0:
+                    s = "ONLINE";
+                    break;
+                case 1:
+                    s = "OFFLINE";
+                    break;
+            }
+            Toast.makeText(getApplicationContext(), "Cardápio carregado "+s, Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -123,73 +144,75 @@ public class Cardapio extends ActionBarActivity implements
 
         @Override
         protected String doInBackground(String... params) {
-            // getting JSON string from URL
-            JSONParser jParser = new JSONParser();
-            JSONObject json = jParser.makeHttpRequest(url_cardapio, "GET", new ArrayList<NameValuePair>());
-
             try {
-                // Checking for SUCCESS TAG
-                int success = json.getInt(TAG_SUCCESS);
-
-                if (success == 1) {
-                    // products found
-                    // Getting Array of Products
-                    refeicoes = json.getJSONArray("cardapio");
-                    // looping through All Products
-                    cardapio = new Dia[5];
-                    for (int i = 0; i < refeicoes.length(); i++) {
-                        JSONObject c = refeicoes.getJSONObject(i).getJSONObject("Cardapio");
-
-                        //Atualiza o array de dias com as informacoes do JSON
-                        cardapio[i] = new Dia(
-                                c.getBoolean("funcionamento"),
-                                c.getString("dia_mes"),
-                                c.getString("dia_semana"),
-                                c.getString("arroz"),
-                                c.getString("feijao"),
-                                c.getString("mistura1"),
-                                c.getString("mistura2"),
-                                c.getString("sobremesa"),
-                                c.getString("salada"),
-                                c.getString("suco"),
-                                c.getBoolean("especial")
-                        );
-
-                    }
-                } else {
-                    // no products found
-                    pDialog.dismiss();
-                    pDialog.setMessage("Não foi possível carregar o cardápio. Verifique a conexão à Internet.");
-                    pDialog.setIndeterminate(false);
-                    pDialog.setCancelable(true);
-                    pDialog.show();
-                    pDialog.setOnDismissListener(new OnDismissListener() {
-
-                        @Override
-                        public void onDismiss(DialogInterface dialog) {
-                            finish();
-                        }
-                    });
-                }
-            } catch (NullPointerException e){
+                atualizaCardapio();
+            } catch (IOException e) {
+                e.printStackTrace();
                 return "internet";
             } catch (JSONException e) {
                 e.printStackTrace();
+                return "erro";
             }
-
             return "";
         }
 
-        protected void onPostExecute(String file_url) {
+        protected void onPostExecute(String resultado) {
             pDialog.dismiss();
             //Se nao deu erro nenhum
-            if(file_url.equals("")){
+            if(resultado.equals("")){
                 myHandler.sendEmptyMessage(0);
                 return;
             }
-            if(file_url.equals("internet")){
+            if(resultado.equals("internet")){
                 new SemInternetDialog(Cardapio.this);
                 return;
+            }
+            if(resultado.equals("erro")){
+                return;
+            }
+        }
+
+        private void atualizaCardapio() throws IOException, JSONException {
+            JSONObject json = null;
+            if (PainelDeControle.isNetworkAvailable()) {
+                Log.d("Pegando ONLINE", "ONLINE");
+                // getting JSON string from URL
+                JSONParser jParser = new JSONParser();
+                json = jParser.makeHttpRequest(url_cardapio, "GET", new ArrayList<NameValuePair>());
+                String jsonCardapio = json.toString();
+                toast.sendEmptyMessage(0);
+                PainelDeControle.writeToFile(NOME_JSON_CARDAPIO_OFFLINE, jsonCardapio);
+            } else{
+                toast.sendEmptyMessage(1);
+                String jsonOffline = PainelDeControle.readFromFile(NOME_JSON_CARDAPIO_OFFLINE);
+                json = new JSONObject(jsonOffline);
+            }
+            parseJSON(json);
+        }
+
+        private void parseJSON(JSONObject json) throws JSONException {
+            // products found
+            // Getting Array of Products
+            refeicoes = json.getJSONArray("cardapio");
+            // looping through All Products
+            cardapio = new Dia[5];
+            for (int i = 0; i < refeicoes.length(); i++) {
+                JSONObject c = refeicoes.getJSONObject(i).getJSONObject("Cardapio");
+
+                //Atualiza o array de dias com as informacoes do JSON
+                cardapio[i] = new Dia(
+                        c.getBoolean("funcionamento"),
+                        c.getString("dia_mes"),
+                        c.getString("dia_semana"),
+                        c.getString("arroz"),
+                        c.getString("feijao"),
+                        c.getString("mistura1"),
+                        c.getString("mistura2"),
+                        c.getString("sobremesa"),
+                        c.getString("salada"),
+                        c.getString("suco"),
+                        c.getBoolean("especial")
+                );
             }
         }
     }
@@ -197,23 +220,19 @@ public class Cardapio extends ActionBarActivity implements
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_cardapio, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         switch (item.getItemId()){
             case R.id.about:
                 new Sobre(this);
                 return true;
-            case R.id.preco:
-                new TabelaPrecos(this);
-                return true;
+//            case R.id.preco:
+//                new TabelaPrecos(this);
+//                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -223,8 +242,6 @@ public class Cardapio extends ActionBarActivity implements
     public void onTabSelected(ActionBar.Tab tab,
                               FragmentTransaction fragmentTransaction) {
         int abaSelecionada = tab.getPosition();
-        // When the given tab is selected, switch to the corresponding page in
-        // the ViewPager.
         mViewPager.setCurrentItem(abaSelecionada);
     }
 
@@ -238,10 +255,6 @@ public class Cardapio extends ActionBarActivity implements
                                 FragmentTransaction fragmentTransaction) {
     }
 
-    /**
-     * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
-     * one of the sections/tabs/pages.
-     */
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
         public SectionsPagerAdapter(FragmentManager fm) {
@@ -307,9 +320,4 @@ public class Cardapio extends ActionBarActivity implements
             return rootView;
         }
     }
-
-    /**
-     * Background Async Task to Load all product by making HTTP Request
-     * */
-
 }

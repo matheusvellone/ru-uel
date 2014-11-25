@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.felintovellone.ru.uel"
-    android:versionCode="1"
-    android:versionName="1.0"
+    android:versionCode="2"
+    android:versionName="1.1"
     android:installLocation="preferExternal">
 
+    <!--Para acessar o cardápio online-->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!--Para salvar o JSON recebido e disponibilizar offline-->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!--Checar por conexão a Internet-->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <uses-sdk
@@ -16,7 +20,8 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/Theme.AppCompat.Light">
+        android:theme="@style/Theme.AppCompat.Light"
+        android:name="com.felintovellone.Cardapio.StaticContext">
         <activity
             android:name="com.felintovellone.Cardapio.Cardapio"
             android:label="@string/app_name"
