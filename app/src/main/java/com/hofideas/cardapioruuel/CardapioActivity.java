@@ -18,9 +18,10 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.hofideas.cardapioruuel.utils.ConvertUtils;
+import com.hofideas.cardapioruuel.utils.RequestManager;
 
 public class CardapioActivity extends AppCompatActivity {
-
+    private final static String jsonCardapio = "http://cardapio-uel.herokuapp.com/";
     private String[] dias = {
             "Segunda-Feira", "Terça-Feira", "Quarta-Feira", "Quinta-Feira", "Sexta-Feira"
     };
@@ -38,6 +39,10 @@ public class CardapioActivity extends AppCompatActivity {
      * The {@link ViewPager} that will host the section contents.
      */
     private ViewPager mViewPager;
+
+    private void parseCardapion() {
+
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +70,7 @@ public class CardapioActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
-
+        RequestManager.getInstance(this).makeHttpRequest(jsonCardapio, "GET");
     }
 
 

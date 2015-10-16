@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.hofideas.cardapioruuel" >
 
+    <!--Para acessar o cardápio online-->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!--Para salvar o JSON recebido e disponibilizar offline-->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!--Checar por conexão a Internet-->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
