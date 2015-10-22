@@ -1,8 +1,10 @@
-package com.hofideas.cardapioruuel.utils;
+package com.hofideas.cardapioruuel.Manager;
 
 import android.content.Context;
 import android.util.Log;
+import android.widget.Toast;
 
+import com.android.volley.NoConnectionError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -22,7 +24,7 @@ public class RequestManager {
         requestQueue = getRequestQueue();
     }
 
-    public void makeHttpRequest(String url, String method) {
+    public void httpRequest(String url, String method, final VolleyCallback callback) {
         int requestMethod;
         switch (method) {
             case "POST":
@@ -42,14 +44,16 @@ public class RequestManager {
 
                     @Override
                     public void onResponse(JSONObject response) {
-                        Log.d("Response", response.toString());
+                        callback.onSuccess(response);
                     }
                 }, new Response.ErrorListener() {
 
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        // TODO Auto-generated method stub
-
+                        if (error instanceof NoConnectionError) {
+                            Toast.makeText(_context, "Não há uma conexão com a Internet para realizar esta operação", Toast.LENGTH_LONG).show();
+                        }
+                        callback.onError(error);
                     }
                 });
 
@@ -72,5 +76,10 @@ public class RequestManager {
             requestQueue = Volley.newRequestQueue(_context.getApplicationContext());
         }
         return requestQueue;
+    }
+
+    public interface VolleyCallback {
+        void onSuccess(Object result);
+        void onError(VolleyError error);
     }
 }
