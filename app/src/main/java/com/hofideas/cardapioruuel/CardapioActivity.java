@@ -1,6 +1,9 @@
 package com.hofideas.cardapioruuel;
 
+import android.app.ProgressDialog;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
@@ -10,6 +13,7 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,13 +21,22 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.hofideas.cardapioruuel.utils.ConvertUtils;
 import com.hofideas.cardapioruuel.Manager.CardapioRequestManager;
+import com.hofideas.cardapioruuel.Model.Dia;
+import com.hofideas.cardapioruuel.utils.ConvertUtils;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Random;
 
 public class CardapioActivity extends AppCompatActivity {
-    private String[] dias = {
+    private static final String[] dias = {
             "Segunda-Feira", "Terça-Feira", "Quarta-Feira", "Quinta-Feira", "Sexta-Feira"
     };
+    private Dia[] cardapioDias;
+    private ProgressDialog loadingCardapioDialog;
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
      * fragments for each of the sections. We use a
@@ -38,10 +51,27 @@ public class CardapioActivity extends AppCompatActivity {
      * The {@link ViewPager} that will host the section contents.
      */
     private ViewPager mViewPager;
+    private CardapioRequestManager cardapioRequestManager = new CardapioRequestManager();
+    private Handler cardapioHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case 0:
+                    parseCardapio();
+                default:
+                    loadingCardapioDialog.dismiss();
+                    mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
 
-    private void parseCardapion() {
+                    // Set up the ViewPager with the sections adapter.
+                    mViewPager = (ViewPager) findViewById(R.id.container);
+                    mViewPager.setAdapter(mSectionsPagerAdapter);
 
-    }
+                    TabLayout tabLayout = (TabLayout) findViewById(R.id.tabs);
+                    tabLayout.setupWithViewPager(mViewPager);
+                    break;
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,16 +80,6 @@ public class CardapioActivity extends AppCompatActivity {
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        // Create the adapter that will return a fragment for each of the three
-        // primary sections of the activity.
-        mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
-
-        // Set up the ViewPager with the sections adapter.
-        mViewPager = (ViewPager) findViewById(R.id.container);
-        mViewPager.setAdapter(mSectionsPagerAdapter);
-
-        TabLayout tabLayout = (TabLayout) findViewById(R.id.tabs);
-        tabLayout.setupWithViewPager(mViewPager);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -69,8 +89,15 @@ public class CardapioActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
-        CardapioRequestManager cardapioManager = new CardapioRequestManager();
-        cardapioManager.getCardapio(this);
+
+        loadingCardapioDialog = new ProgressDialog(this);
+        loadingCardapioDialog.setMessage("Carregando cardápio. Por favor espere...");
+        loadingCardapioDialog.setIndeterminate(false);
+        loadingCardapioDialog.setCancelable(false);
+        loadingCardapioDialog.show();
+
+        cardapioDias = new Dia[5];
+        cardapioRequestManager.updateCardapio(this, cardapioHandler);
     }
 
 
@@ -111,19 +138,18 @@ public class CardapioActivity extends AppCompatActivity {
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
-            return PlaceholderFragment.newInstance(position + 1);
+            return PlaceholderFragment.newInstance(cardapioDias[position]);
         }
 
         @Override
         public int getCount() {
-            // Show 3 total pages.
             return dias.length;
         }
 
         @Override
         public CharSequence getPageTitle(int position) {
             if (position >= 0 && position < dias.length) {
-                return ConvertUtils.sigla(dias[position]);
+                return ConvertUtils.sigla(dias[position], 3);
             }
             return null;
         }
@@ -133,21 +159,15 @@ public class CardapioActivity extends AppCompatActivity {
      * A placeholder fragment containing a simple view.
      */
     public static class PlaceholderFragment extends Fragment {
-        /**
-         * The fragment argument representing the section number for this
-         * fragment.
-         */
-        private static final String ARG_SECTION_NUMBER = "section_number";
+        private static Dia diaSelecionado;
 
         /**
          * Returns a new instance of this fragment for the given section
          * number.
          */
-        public static PlaceholderFragment newInstance(int sectionNumber) {
+        public static PlaceholderFragment newInstance(Dia dia) {
             PlaceholderFragment fragment = new PlaceholderFragment();
-            Bundle args = new Bundle();
-            args.putInt(ARG_SECTION_NUMBER, sectionNumber);
-            fragment.setArguments(args);
+            diaSelecionado = dia;
             return fragment;
         }
 
@@ -157,10 +177,43 @@ public class CardapioActivity extends AppCompatActivity {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
+            Log.d("NULL", (diaSelecionado == null) + "");
             View rootView = inflater.inflate(R.layout.fragment_cardapio, container, false);
-            TextView textView = (TextView) rootView.findViewById(R.id.section_label);
-            textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)));
+            ((TextView) rootView.findViewById(R.id.dia)).setText(diaSelecionado.getDia_mes() + " <> " + diaSelecionado.getDia_semana());
+            ((TextView) rootView.findViewById(R.id.arrozfeijao)).setText(diaSelecionado.getArroz() + " e " + diaSelecionado.getFeijao());
+            ((TextView) rootView.findViewById(R.id.mistura1)).setText(diaSelecionado.getMistura1());
+            ((TextView) rootView.findViewById(R.id.mistura2)).setText(diaSelecionado.getMistura2());
+            ((TextView) rootView.findViewById(R.id.salada)).setText(diaSelecionado.getSalada());
+            ((TextView) rootView.findViewById(R.id.sobremesa)).setText(diaSelecionado.getSobremesa());
+            ((TextView) rootView.findViewById(R.id.suco)).setText(diaSelecionado.getSuco());
             return rootView;
+        }
+    }
+
+    private void parseCardapio() {
+        JSONObject json = cardapioRequestManager.getCardapio();
+        try {
+            JSONArray refeicoes = json.getJSONArray("cardapio");
+            for (int i = 0; i < refeicoes.length(); i++) {
+                JSONObject c = refeicoes.getJSONObject(i);
+
+                //Atualiza o array de dias com as informacoes do JSON
+                cardapioDias[i] = new Dia();
+                cardapioDias[i].setArroz(c.getString("arroz"));
+                cardapioDias[i].setFeijao(c.getString("feijao"));
+                cardapioDias[i].setDia_mes(c.getString("dia_mes"));
+                cardapioDias[i].setDia_semana(dias[i]);
+//                cardapioDias[i].setDia_semana(c.getString("dia_semana"));
+                cardapioDias[i].setFuncionamento(c.getBoolean("funcionamento"));
+                cardapioDias[i].setMistura1(c.getString("mistura1"));
+                cardapioDias[i].setMistura2(c.getString("mistura2"));
+                cardapioDias[i].setSobremesa(c.getString("sobremesa"));
+                cardapioDias[i].setSalada(c.getString("salada"));
+                cardapioDias[i].setSuco(c.getString("suco"));
+                cardapioDias[i].setEspecial(c.getBoolean("especial"));
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
     }
 }
